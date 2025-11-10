@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Simulador de Dividendos — PhD Edition</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: linear-gradient(135deg, #1e3c72, #2a5298); color: #fff; min-height: 100vh; padding: 20px; }
+    .container { max-width: 900px; margin: 40px auto; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(10px); border-radius: 16px; padding: 30px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    h1 { text-align: center; margin-bottom: 30px; font-size: 2.2rem; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+    .input-group { margin-bottom: 20px; }
+    label { display: block; margin-bottom: 8px; font-weight: 600; }
+    input { width: 100%; padding: 12px; border: none; border-radius: 8px; background: rgba(255,255,255,0.2); color: white; font-size: 1rem; outline: none; transition: 0.3s; }
+    input:focus { background: rgba(255,255,255,0.3); transform: scale(1.02); }
+    .buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+    button { flex: 1; min-width: 140px; padding: 14px; background: #00d4ff; color: #000; font-weight: bold; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; transition: 0.3s; }
+    button:hover { background: #00b0d4; transform: translateY(-2px); }
+    button.secondary { background: #333; }
+    button.secondary:hover { background: #555; }
+    .result { margin-top: 30px; padding: 20px; background: rgba(0,212,255,0.2); border-radius: 12px; text-align: center; display: none; }
+    .result h2 { margin-bottom: 15px; font-size: 1.5rem; }
+    .value { font-size: 1.9rem; font-weight: bold; color: #00ff9d; }
+    .chart-container { margin-top: 30px; height: 320px; display: none; }
+    .table-container { margin-top: 30px; max-height: 400px; overflow-y: auto; background: rgba(0,0,0,0.2); border-radius: 12px; padding: 15px; display: none; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { padding: 10px; text-align: right; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    th { text-align: left; background: rgba(0,212,255,0.3); position: sticky; top: 0; }
+    .tab { margin-top: 40px; display: none; }
+    .tab.active { display: block; }
+    .tab h2 { text-align: center; margin-bottom: 20px; }
+    .checklist { background: rgba(0,0,0,0.3); padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+    .checklist ul { line-height: 1.8; }
+    .checklist a { color: #00ff9d; text-decoration: none; }
+    .checklist a:hover { text-decoration: underline; }
+    .footer { text-align: center; margin-top: 50px; font-size: 0.9rem; opacity: 0.8; }
+    @media (max-width: 700px) { .buttons { flex-direction: column; } h1 { font-size: 1.8rem; } .container { padding: 20px; } }
+    @media print { body { background: white; color: black; } .container { box-shadow: none; } button, .buttons { display: none; } .chart-container, .table-container { page-break-inside: avoid; } }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Simulador de Dividendos — PhD Edition</h1>
+
+    <!-- === ENTRADAS === -->
+    <div class="input-group">
+      <label for="aporte">Aporte Mensal (R$)</label>
+      <input type="number" id="aporte" placeholder="Ex: 10000" value="10000" />
+    </div>
+    <div class="input-group">
+      <label for="taxa">Taxa Mensal (%)</label>
+      <input type="number" step="0.01" id="taxa" placeholder="Ex: 0.95" value="0.95" />
+    </div>
+    <div class="input-group">
+      <label for="anos">Período (anos)</label>
+      <input type="number" id="anos" placeholder="Ex: 5" value="5" />
+    </div>
+    <div class="input-group">
+      <label for="meta">Meta de Renda Mensal (R$)</label>
+      <input type="number" id="meta" placeholder="Ex: 7000" />
+    </div>
+
+    <!-- === BOTÕES === -->
+    <div class="buttons">
+      <button onclick="calcular()">CALCULAR</button>
+      <button class="secondary" onclick="mostrarMeses()">VER MÊS A MÊS</button>
+      <button class="secondary" onclick="calcularAporteParaMeta()">QUANTO APORTAR?</button>
+      <button class="secondary" onclick="exportarPDF()">EXPORTAR PDF</button>
+      <button class="secondary" onclick="abrirAba('estudo')">ESTUDO DOS ATIVOS</button>
+    </div>
+
+    <!-- === RESULTADO === -->
+    <div class="result" id="resultado">
+      <h2>Montante Final</h2>
+      <div class="value" id="montante">R$ 0,00</div>
+      <h2 style="margin-top: 20px;">Dividendos Mensais</h2>
+      <div class="value" id="dividendos">R$ 0,00</div>
+    </div>
+
+    <!-- === GRÁFICO === -->
+    <div class="chart-container" id="chartContainer">
+      <canvas id="growthChart"></canvas>
+    </div>
+
+    <!-- === TABELA MÊS A MÊS === -->
+    <div class="table-container" id="tableContainer">
+      <table id="mesesTable">
+        <thead>
+          <tr>
+            <th>Mês</th>
+            <th>Saldo Inicial</th>
+            <th>+ Dividendos</th>
+            <th>× Juros</th>
+            <th>+ Aporte</th>
+            <th>Saldo Final</th>
+            <th>Dividendos Gerados</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <!-- === ABA: ESTUDO DOS ATIVOS === -->
+    <div class="tab" id="estudo">
+      <h2>ESTUDO DOS ATIVOS — Checklist do Mecânico-Investidor PhD</h2>
+
+      <div class="checklist">
+        <h3>1. Ativos para Estudar Hoje</h3>
+        <ul>
+          <li><strong>BBSE3</strong> → <a href="https://statusinvest.com.br/acoes/bbse3" target="_blank">Status Invest</a> | DY ~11%</li>
+          <li><strong>KNCR11</strong> → <a href="https://www.fundsexplorer.com.br/funds/kncr11" target="_blank">Funds Explorer</a> | Papel, CDI+1%</li>
+          <li><strong>XPML11</strong> → <a href="https://www.fundsexplorer.com.br/funds/xpml11" target="_blank">Funds Explorer</a> | Shoppings premium</li>
+          <li><strong>CPLE6</strong> → <a href="https://statusinvest.com.br/acoes/cple6" target="_blank">Status Invest</a> | Energia regulada</li>
+        </ul>
+      </div>
+
+      <div class="checklist">
+        <h3>2. Checklist de Análise (Antes de Comprar)</h3>
+        <table style="width:100%; font-size:0.9rem;">
+          <tr><td>✅ <strong>P/VP</strong></td><td>< 1,0 = desconto | > 1,2 = caro</td></tr>
+          <tr><td>✅ <strong>DY</strong></td><td>> 8% = bom | > 12% = cuidado</td></tr>
+          <tr><td>✅ <strong>Cap Rate</strong></td><td>> 7% = bom para FIIs de tijolo</td></tr>
+          <tr><td>✅ <strong>Vacância</strong></td><td>< 5% = saudável</td></tr>
+          <tr><td>✅ <strong>Payout</strong></td><td>< 90% = sustentável</td></tr>
+          <tr><td>✅ <strong>Dívida Líquida / EBITDA</strong></td><td>< 3x = segura</td></tr>
+        </table>
+      </div>
+
+      <div class="checklist">
+        <h3>3. Onde Estudar (Grátis)</h3>
+        <ul>
+          <li>Status Invest → <a href="https://statusinvest.com.br" target="_blank">statusinvest.com.br</a></li>
+          <li>Funds Explorer → <a href="https://www.fundsexplorer.com.br" target="_blank">fundsexplorer.com.br</a></li>
+          <li>Investidor10 → <a href="https://investidor10.com.br" target="_blank">investidor10.com.br</a></li>
+          <li>Investidor Sardinha → <a href="https://www.youtube.com/c/InvestidorSardinha" target="_blank">YouTube</a></li>
+          <li>B3 Educação → <a href="https://www.b3.com.br/pt_br/educacional/" target="_blank">b3.com.br</a></li>
+        </ul>
+      </div>
+
+      <div style="text-align:center; margin-top:20px; font-style:italic;">
+        “Quem estuda, não joga. Quem joga, perde.” — <strong>Mecânico-Investidor PhD ✈️</strong>
+      </div>
+    </div>
+
+    <div class="footer">
+      Desenvolvido com ❤️ por Grok & Jorge | Reinvestimento total | Educação financeira com humor e precisão!
+    </div>
+  </div>
+
+  <script>
+    let chart = null;
+    let dadosMeses = [];
+
+    function calcular() {
+      const aporte = parseFloat(document.getElementById('aporte').value) || 0;
+      const taxa = (parseFloat(document.getElementById('taxa').value) || 0) / 100;
+      const anos = parseFloat(document.getElementById('anos').value) || 0;
+      const meses = anos * 12;
+
+      if (aporte <= 0 || taxa <= 0 || anos <= 0) {
+        alert("Preencha todos os campos com valores positivos!");
+        return;
+      }
+
+      let saldo = 0;
+      let dividendosReinvestidos = 0;
+      dadosMeses = [];
+
+      for (let mes = 1; mes <= meses; mes++) {
+        const saldoInicial = saldo;
+        saldo += dividendosReinvestidos;
+        const saldoComJuros = saldo * (1 + taxa);
+        saldo = saldoComJuros + aporte;
+        const dividendosGerados = saldo * taxa;
+
+        dadosMeses.push({
+          mes,
+          saldoInicial: saldoInicial.toFixed(2),
+          dividendosReinvestidos: dividendosReinvestidos.toFixed(2),
+          saldoComJuros: saldoComJuros.toFixed(2),
+          aporte,
+          saldoFinal: saldo.toFixed(2),
+          dividendosGerados: dividendosGerados.toFixed(2)
+        });
+
+        dividendosReinvestidos = dividendosGerados;
+      }
+
+      const dividendosMensais = saldo * taxa;
+
+      document.getElementById('montante').textContent = 
+        saldo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+      document.getElementById('dividendos').textContent = 
+        dividendosMensais.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+      document.getElementById('resultado').style.display = 'block';
+      desenharGrafico();
+      salvarSimulacao();
+    }
+
+
+function desenharGrafico() {
+  const ctx = document.getElementById('growthChart').getContext('2d');
+  const aporte = parseFloat(document.getElementById('aporte').value) || 10000; // ← DINÂMICO!
+  const taxa = (parseFloat(document.getElementById('taxa').value) || 0) / 100;
+  const meses = (parseFloat(document.getElementById('anos').value) || 0) * 12;
+
+  const labels = dadosMeses.map(d => `Mês ${d.mes}`);
+  const valores = dadosMeses.map(d => parseFloat(d.saldoFinal));
+
+  // === POUPANÇA DINÂMICA: usa o MESMO APORTE da simulação ===
+  const poupanca = [];
+  let saldoPoupanca = 0;
+  for (let i = 0; i < meses; i++) {
+    saldoPoupanca = saldoPoupanca * 1.005 + aporte; // 0,5% a.m.
+    poupanca.push(parseFloat(saldoPoupanca.toFixed(2)));
+  }
+
+  if (chart) chart.destroy();
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { 
+          label: 'Seu Patrimônio (R$)', 
+          data: valores, 
+          borderColor: '#00ff9d', 
+          backgroundColor: 'rgba(0,255,157,0.1)', 
+          fill: true, 
+          tension: 0.4 
+        },
+        { 
+          label: 'Poupança (0,5%/mês)', 
+          data: poupanca, 
+          borderColor: '#ff6b6b', 
+          backgroundColor: 'rgba(255,107,107,0.1)', 
+          fill: true, 
+          tension: 0.4 
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#fff' } } },
+      scales: { 
+        y: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } }, 
+        x: { ticks: { color: '#fff' }, grid: { color: 'rgba(255,255,255,0.1)' } } 
+      }
+    }
+  });
+
+  document.getElementById('chartContainer').style.display = 'block';
+}
+
+    function mostrarMeses() {
+      const tbody = document.querySelector('#mesesTable tbody');
+      tbody.innerHTML = '';
+      dadosMeses.forEach(d => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${d.mes}</td><td>R$ ${d.saldoInicial}</td><td>R$ ${d.dividendosReinvestidos}</td><td>R$ ${d.saldoComJuros}</td><td>R$ ${d.aporte.toFixed(2)}</td><td><strong>R$ ${d.saldoFinal}</strong></td><td>R$ ${d.dividendosGerados}</td>`;
+        tbody.appendChild(tr);
+      });
+      document.getElementById('tableContainer').style.display = 'block';
+    }
+
+    function calcularAporteParaMeta() {
+      const meta = parseFloat(document.getElementById('meta').value) || 0;
+      const taxa = (parseFloat(document.getElementById('taxa').value) || 0) / 100;
+      const anos = parseFloat(document.getElementById('anos').value) || 0;
+      const meses = anos * 12;
+
+      if (meta <= 0 || taxa <= 0 || anos <= 0) return alert("Preencha meta, taxa e anos!");
+      const montanteNecessario = meta / taxa;
+      const aporteEstimado = montanteNecessario / ((Math.pow(1 + taxa, meses) - 1) / taxa * (1 + taxa));
+      alert(`Para R$ ${meta.toLocaleString('pt-BR')} de renda mensal em ${anos} anos,\nvocê precisa aportar cerca de:\n\nR$ ${aporteEstimado.toFixed(2).replace('.', ',')} por mês`);
+    }
+
+    function exportarPDF() { window.print(); }
+
+    function salvarSimulacao() {
+      const dados = { aporte: document.getElementById('aporte').value, taxa: document.getElementById('taxa').value, anos: document.getElementById('anos').value };
+      localStorage.setItem('simulacaoDiv', JSON.stringify(dados));
+    }
+
+    function abrirAba(aba) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.getElementById(aba).classList.add('active');
+    }
+
+    window.onload = function() {
+      const salvo = localStorage.getItem('simulacaoDiv');
+      if (salvo) {
+        const d = JSON.parse(salvo);
+        document.getElementById('aporte').value = d.aporte;
+        document.getElementById('taxa').value = d.taxa;
+        document.getElementById('anos').value = d.anos;
+      }
+      calcular();
+    };
+  </script>
+
+</body>
+</html>
