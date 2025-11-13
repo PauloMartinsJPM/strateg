@@ -6,7 +6,7 @@ R$ 10.000/mês → R$ 7635,16 de renda passiva em 5 anos
 **Cálculo 100% realista** · App instalável no celular · Funciona offline · Sem enrolação
 
 Link direto (instale no seu celular em 5 segundos):  
-https://paulomartinsjpm.github.io/Strateg
+https://paulomartinsjpm.github.io/Strateg/
 
 ## Por que esse simulador é diferente?
 - Cálculo **exatamente igual** ao Status Invest, Funds Explorer e Excel  
