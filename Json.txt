@@ -1,0 +1,9 @@
+O que arquivo Json faz:
+• 	Define o nome e ícone do app quando instalado no celular ou desktop
+• 	Controla a aparência da tela inicial (cor de fundo, tema, modo standalone)
+• 	Ajuda o navegador a tratar seu site como um app nativo
+
+O que ele não faz:
+• 	Não interfere em cálculos, gráficos ou lógica JavaScript
+• 	Não armazena ou carrega dados
+• 	Não afeta o comportamento do simulador
