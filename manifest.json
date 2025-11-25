@@ -1,7 +1,8 @@
 {
   "name": "Simulador Financeiro",
   "short_name": "Simulador",
-  "start_url": "/",
+  "start_url": "./",
+  "scope": "./",
   "description": "Uma ferramenta de simulação para cálculos financeiros rápidos.",
   "display": "standalone",
   "background_color": "#1e3c72",
@@ -24,3 +25,4 @@
     }
   ]
 }
+
