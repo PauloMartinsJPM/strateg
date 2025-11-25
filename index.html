@@ -6,7 +6,8 @@
   <title>Simulador de Dividendos-PhD Edition</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!--<link rel="manifest" href="manifest.json"> -->
-  <link rel="manifest" href="/strateg/manifest.json">
+  <!-- Substitua a tag do manifest atual por: -->
+  <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="icon-192.png" type="image/png">
   <meta name="theme-color" content="#1e3c72">
   <style>
@@ -147,11 +148,17 @@
   </div>
 
   <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js');
-      });
-    }
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js', { scope: './' })
+        .then(reg => {
+          console.log('ServiceWorker registrado com sucesso:', reg.scope);
+        })
+        .catch(err => {
+          console.warn('Falha ao registrar ServiceWorker:', err);
+        });
+    });
+  }
 
     let chart = null;
     let dadosMeses = [];
@@ -278,6 +285,7 @@
 </body>
 
 </html>
+
 
 
 
